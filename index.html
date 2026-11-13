@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GRE Vocab Quiz</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --surface: #f5f5f5;
+      --border: #d8d8d8;
+      --text: #111111;
+      --muted: #777777;
+      --accent: #1a6fcc;
+      --green: #22a06b;
+      --red: #e5484d;
+      --cell-w: 120px;
+      --cell-h: 44px;
+      --rows-per-col: 30;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Slider ── */
+    .day-slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .day-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 110px;
+    }
+
+    .day-label strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 180px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 24px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+      position: sticky;
+      top: 49px;
+      background: var(--bg);
+      z-index: 9;
+    }
+
+    .stat { display: flex; align-items: center; gap: 5px; }
+    .stat-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-green { background: var(--green); }
+    .dot-red   { background: var(--red); }
+    .dot-none  { background: #ccc; }
+
+    .progress-wrap {
+      flex: 1; min-width: 100px;
+      height: 3px; background: var(--border);
+      border-radius: 3px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--accent);
+      border-radius: 3px; transition: width 0.3s;
+    }
+
+    /* ── Filter tabs ── */
+    .filter-bar {
+      display: flex;
+      gap: 6px;
+      padding: 8px 24px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      position: sticky;
+      top: 88px;
+      background: var(--bg);
+      z-index: 8;
+    }
+
+    .filter-tab {
+      padding: 3px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .filter-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Kbd hint ── */
+    .kbd-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      background: var(--surface);
+      font-family: monospace;
+      font-size: 0.7rem;
+    }
+
+    .btn {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--surface); }
+
+    /* ── Password gate ── */
+    .gate {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gate.hidden { display: none; }
+
+    .gate-box {
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .gate-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .gate-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: -8px;
+    }
+
+    .gate-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      font-size: 0.9rem;
+      outline: none;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.15s;
+    }
+    .gate-input:focus { border-color: var(--accent); }
+    .gate-input.error { border-color: var(--red); }
+
+    .gate-error {
+      font-size: 0.78rem;
+      color: var(--red);
+      min-height: 1em;
+    }
+
+    .gate-btn {
+      padding: 9px 0;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .gate-btn:hover { background: #155baa; }
+
+    /* ── Spreadsheet ── */
+    main {
+      flex: 1;
+      padding: 20px 24px 40px;
+      overflow-x: auto;
+    }
+
+    /*
+      Layout concept:
+      We render groups as columns.
+      Each group = a header cell + 30 word cells stacked vertically.
+      Groups sit side by side horizontally (flex-row).
+    */
+    .sheet {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 0;
+      width: max-content;
+    }
+
+    .group-col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+    .group-col:first-child { border-left: 1px solid var(--border); }
+
+    .col-header {
+      width: var(--cell-w);
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      border-top: 1px solid var(--border);
+      user-select: none;
+    }
+
+    .word-cell {
+      width: var(--cell-w);
+      height: var(--cell-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 450;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.1s;
+      padding: 4px 6px;
+      line-height: 1.25;
+      outline: none;
+      position: relative;
+    }
+
+    .word-cell:hover { filter: brightness(0.95); }
+    .word-cell:focus { box-shadow: inset 0 0 0 2px var(--accent); z-index: 2; }
+
+    .word-cell.status-none  { background: #fff; }
+    .word-cell.status-green { background: #d4f4e5; color: #0d5c38; }
+    .word-cell.status-red   { background: #fde8e8; color: #8b1a1d; }
+
+    /* dimmed when filtered out */
+    .word-cell.hidden {
+      opacity: 0.08;
+      pointer-events: none;
+    }
+
+    .empty-state {
+      padding: 60px 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Definition modal ── */
+    .def-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.25);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .def-backdrop.open { display: flex; }
+
+    .def-modal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 28px 24px;
+      max-width: 420px;
+      width: calc(100% - 40px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      position: relative;
+    }
+
+    .def-word {
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .def-pos {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-style: italic;
+      margin-bottom: 14px;
+    }
+
+    .def-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .def-text {
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+
+    .def-synonyms {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .def-syn-chip {
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    .def-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      color: var(--muted);
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .def-close:hover { background: var(--surface); color: var(--text); }
+
+    .def-loading {
+      font-size: 0.85rem;
+      color: var(--muted);
+      padding: 10px 0;
+    }
+
+    .def-error {
+      font-size: 0.85rem;
+      color: var(--red);
+      padding: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div class="gate-title">GRE Vocab</div>
+    <div class="gate-sub">Enter the password to continue.</div>
+    <input class="gate-input" id="gateInput" type="password" placeholder="Password" autocomplete="current-password" />
+    <div class="gate-error" id="gateError"></div>
+    <button class="gate-btn" id="gateBtn">Enter</button>
+  </div>
+</div>
+
+<header>
+  <h1>GRE Vocab</h1>
+  <div class="header-right">
+    <div class="day-slider-wrap">
+      <span class="day-label">Day <strong id="dayNum">1</strong> &mdash; Groups 1–<strong id="groupNum">1</strong></span>
+      <input type="range" id="daySlider" min="1" max="37" value="1" step="1" />
+    </div>
+    <div class="kbd-hint">
+      <span><kbd class="kbd">G</kbd> known</span>
+      <span><kbd class="kbd">R</kbd> wrong</span>
+      <span><kbd class="kbd">W</kbd> reset</span>
+      <span><kbd class="kbd">D</kbd> define</span>
+    </div>
+    <button class="btn" id="resetDayBtn">Reset Day</button>
+    <button class="btn" id="resetAllBtn">Reset All</button>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-dot dot-green"></div><span id="statGreen">0 known</span></div>
+  <div class="stat"><div class="stat-dot dot-red"></div><span id="statRed">0 wrong</span></div>
+  <div class="stat"><div class="stat-dot dot-none"></div><span id="statNone">0 unseen</span></div>
+  <div class="progress-wrap"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <span id="statPct">0%</span>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-tab active" data-filter="all">All</button>
+  <button class="filter-tab" data-filter="none">Unseen</button>
+  <button class="filter-tab" data-filter="green">Known</button>
+  <button class="filter-tab" data-filter="red">Wrong</button>
+</div>
+
+<main>
+  <div class="sheet" id="sheet"></div>
+</main>
+
+<!-- Definition modal -->
+<div class="def-backdrop" id="defBackdrop">
+  <div class="def-modal" role="dialog" aria-modal="true" aria-labelledby="defWord">
+    <button class="def-close" id="defClose" aria-label="Close">✕</button>
+    <div class="def-word" id="defWord"></div>
+    <div class="def-pos"  id="defPos"></div>
+    <div id="defBody">
+      <div class="def-loading">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GROUPS = {
+  "Group 1": ["abound","amorphous","austere","belie","capricious","cerebral","congenial","conspicuous","cursory","daunting","deify","didactic","disseminate","feasible","flout","homogeneous","humdrum","insipid","loquacious","misanthropic","misnomer","negligent","obsequious","placate","proclivity","puerile","quixotic","spendthrift","taciturn","wary"],
+  "Group 2": ["adulterate","advocate","aggrandize","alacrity","ambivalent","ameliorate","amenable","anachronistic","audacious","avaricious","banal","benign","brazen","calumny","candid","castigate","caustic","construe","contrite","convoluted","covet","craven","decorum","deft","demur","derivative","desiccate","diatribe","incredulous","ingenuous"],
+  "Group 3": ["abate","abjure","anomalous","antipathy","arcane","arduous","artless","ascetic","assuage","betray","bucolic","burgeon","cacophonous","canonize","censure","chicanery","coalesce","cogent","compelling","contend","copious","cosmopolitan","deference","desultory","diffident","dilatory","equivocate","polarize","prodigal","verbose"],
+  "Group 4": ["abstain","approbation","cherish","corroborate","disparate","emulate","enervate","ephemeral","fervid","garrulous","incendiary","inimical","intimate","invigorate","mitigate","obsolete","opaque","paradigmatic","pedantic","placid","polemical","precipitate","profundity","prophetic","prudent","punctilious","recondite","scrupulous","tranquil","vacillate"],
+  "Group 5": ["aloof","clangor","conventional","debunk","discernible","diminutive","enigmatic","estranged","extravagant","fanciful","frivolous","heterogeneous","imperious","impertinent","invasive","irresolute","laudable","lax","marginalize","panache","plodding","prosaic","remedial","restive","sporadic","stigmatize","undermine","utterly","weary","zealous"],
+  "Group 6": ["admonish","aesthetic","affectation","alleviate","analogous","bolster","chauvinistic","connoisseur","dissemble","dogged","dupe","empirical","engender","entitled","pertinacious","presumptuous","probity","proliferate","specious","spurious","subjective","subvert","timorous","tortuous","tractable","transient","ubiquitous","underscore","venal","venerate"],
+  "Group 7": ["appease","arbitrary","archaic","clamorous","dearth","explicable","hyperbole","immutable","indefatigable","indolent","insular","intransigent","intrepid","irreverent","loathe","malign","malleable","neophyte","plastic","platitude","prescient","pristine","reproach","robust","salubrious","sanction","sedulous","soporific","stern","tendentious"],
+  "Group 8": ["accentuate","conjectural","convivial","decadent","egregious","evanescent","flamboyant","forestall","gainsay","galvanize","indiscriminate","innocuous","momentary","mundane","nettlesome","nullify","obviate","omnipresent","oust","palpable","perfidy","profuse","pugnacious","sagacious","sanguine","scant","skullduggery","trivial","utilitarian","vapid"],
+  "Group 9": ["boorish","brook","circumspect","comity","commensurate","cordial","deleterious","dichotomy","edify","elicit","erudite","fecund","feeble","felicitous","forbear","haphazard","hodgepodge","impede","impetuous","irascible","mercenary","meticulous","mordant","outstrip","precarious","quirky","repudiate","tact","trifling","turbulent"],
+  "Group 10": ["acumen","antithesis","ascribe","befuddled","eschew","esoteric","evasive","exculpate","expedite","fastidious","feign","furtive","hamper","indispensable","lament","myopic","nonchalant","partial","pensive","portend","provincial","rudimentary","salutary","sever","slight","somnolent","stoic","supersede","tout","wane"],
+  "Group 11": ["abhor","boisterous","chivalrous","churlish","clandestine","complacent","cumbersome","debilitating","deliberate","droll","eccentric","fractious","limpid","mawkish","obeisance","ostentatious","panacea","perfunctory","perilous","pervasive","preclude","predilection","rapacious","relish","satirical","sham","skirt","sluggish","spartan","truculent"],
+  "Group 12": ["acrimonious","belligerent","beneficent","canny","cavalier","distressed","dwindling","eclipse","encyclopedic","exacerbate","exasperated","fungible","hackneyed","incongruous","interchangeable","laconic","lucrative","magisterial","onerous","opprobrium","parsimonious","peripheral","provocative","renounce","tempestuous","tenable","transgression","urbane","verisimilitude","vitiate"],
+  "Group 13": ["affinity","altruistic","baroque","byzantine","compromise","conciliatory","countenance","covert","credible","diffuse","documentary","exhaustive","exhilarating","extraneous","fervor","futile","illusory","invidious","lethargic","metaphorical","mimic","numinous","obscure","overt","pellucid","perpetuate","rational","scathing","subtle","superficial"],
+  "Group 14": ["acquiesce","adroit","amend","animus","apologist","astringent","collaborate","competent","correlate","deride","dictate","discreet","divorced","elitist","exacting","flummoxed","fruitful","inborn","polymath","reticent","stringent","subservient","surreptitious","tantalizing","tantamount","torpor","trenchant","umbrage","versatile","wayward"],
+  "Group 15": ["alienate","apathy","apropos","apt","cloak","consensus","distort","divergent","elated","enchant","entrenched","exotic","exploitative","foreseeable","forsake","gratify","heed","judicious","lucid","pertinent","propriety","scintillating","sensational","sophisticated","strife","understated","unscrupulous","veracity","virulent","volatile"],
+  "Group 16": ["antedate","banish","bridle","comply","crestfallen","curtail","elucidate","evade","feckless","fester","iconoclastic","immure","improvise","inhibit","inscrutable","lionize","monotonous","peculiar","premeditate","profligate","reconcile","refine","relinquish","ruminate","skittish","superfluous","synoptic","thorough","visionary","vociferous"],
+  "Group 17": ["acclaim","ascertain","assertive","bogus","cataclysmic","circumscribe","complementary","contentious","disingenuous","divulge","dogmatic","fallacious","foolhardy","hinder","impair","impugn","incessant","inclined","inveterate","miserly","patent","petulant","pithy","pliant","sanctimonious","sound","tarnish","tepid","upbraid","vexation"],
+  "Group 18": ["abet","accessible","acquisitive","amalgamate","attenuate","augment","aversion","blithe","contempt","dawdle","deflect","discount","dissident","efficacious","equitable","erratic","industrious","inform","irksome","manacle","modest","noxious","pernicious","predicament","proficient","prolix","scorn","subordinate","unseemly","veritable"],
+  "Group 19": ["acolyte","anoint","base","coercion","coin","cunning","discomfit","dissent","distill","dubious","ebullient","facetious","fallible","florid","gawky","inveigle","jettison","mendacity","munificent","naive","noble","parochial","pedestrian","prevaricate","prime","radical","recrudescent","temporal","transitory","viable"],
+  "Group 20": ["abreast","confound","digression","discrepancy","duplicitous","expedient","fabricate","glum","harbinger","intrinsic","largesse","libertine","malfeasance","manifest","minute","modish","nascent","perennial","pious","providential","prowess","schism","slander","stalwart","supplicate","terse","tirade","universal","vanquish","woeful"],
+  "Group 21": ["abject","amicable","animosity","aver","barrage","cathartic","decipher","delusion","dispense","eloquent","enthrall","eradicate","fledgling","fortitude","fortuitous","goad","imminent","incontrovertible","itinerant","magnanimous","meritorious","mutiny","paradoxical","perseverance","render","repertoire","resilient","resolute","supple","valor"],
+  "Group 22": ["arresting","chastise","cumbersome","economy","elementary","embellish","euphoric","exonerate","extrapolate","falter","fervent","foment","gaffe","heterodox","histrionic","implicit","inviolate","liability","obstinate","painstaking","phlegmatic","prodigious","propensity","qualm","renege","stinting","temper","tentative","unprecedented","vivacious"],
+  "Group 23": ["allusive","astute","commence","convalescent","curb","decry","duress","evoke","fawn","fret","glib","headstrong","intermittent","ire","languid","lull","mettlesome","mollify","neutralize","nonplussed","precipitous","pretentious","profound","propagate","recourse","refute","regress","repercussion","replenish","vigilant"],
+  "Group 24": ["assail","benevolent","berate","buoyant","buttress","condone","contravene","denounce","despotic","deviate","disinterested","escalate","exorcise","finicky","foil","intertwined","inundate","ironclad","jeopardize","mercurial","oblivious","perpetrate","plaintive","poignant","quiescent","reiterate","subside","subsume","surmount","tangential"],
+  "Group 25": ["adept","adverse","appropriate","archetype","articulate","auspicious","bereft","captious","conclusive","conspire","delineate","disentangle","exhort","frailty","grievance","harangue","ploy","poise","pomposity","proxy","relent","rhetoric","rigor","sparse","steadfast","suspect","tedious","vitality","whimsical","yield"],
+  "Group 26": ["apprehension","ardent","axiomatic","cease","conducive","corporeal","doctrinaire","eclectic","equanimity","exorbitant","fickle","figurative","flustered","gullible","idiosyncratic","incidental","ingrained","insolent","lampoon","lavish","lugubrious","macabre","morose","officious","ramification","serene","supplant","tacit","transcend","treatise"],
+  "Group 27": ["antagonize","barren","bombastic","cajole","chary","curmudgeon","dirge","estimable","euphemism","excoriate","exigent","haughty","heady","imperturbable","implacable","lambaste","miscreant","peccadillo","philistine","relegate","repugnant","sentimental","squander","swindle","tangible","turpitude","unalloyed","undercut","wheedle","xenophobic"],
+  "Group 28": ["abeyance","abstract","affront","agitate","august","burnish","coy","deprecate","disdain","disperse","distend","endemic","enmity","gauche","hysterical","impudent","inchoate","penchant","quandary","quarantine","quash","quibble","ravage","recant","redoubtable","retiring","shrill","sophistry","substantiate","wily"],
+  "Group 29": ["abscond","apogee","aspersion","bawdy","chagrin","collude","commiserate","conflagration","contretemps","conviction","croon","depose","detente","dowdy","echelon","ennui","expatiate","fraught","fulcrum","imbroglio","jocund","languish","nadir","nimble","ominous","outlandish","propitious","prurient","sadistic","zenith"],
+  "Group 30": ["aberrant","abide","bravado","callow","capitulate","cogitate","deportment","extemporize","factious","fallow","feint","flagrant","gratuitous","grovel","indecorous","intrigue","nominal","obdurate","obstreperous","odious","plucky","precocious","remuneration","slovenly","soliloquy","spurn","stolid","temerity","tenuous","verve"],
+  "Group 31": ["abrogate","aghast","apprise","beguile","boon","callous","coddle","crescendo","extenuating","frenetic","fringe","hapless","immaculate","obfuscate","ossify","pastiche","perspicacious","ponderous","recluse","retaliate","rhapsody","serendipitous","shirk","sinecure","sinuous","sordid","stanch","surfeit","ulterior","voluble"],
+  "Group 32": ["abstruse","auxiliary","caricature","depravity","dilettante","effrontery","encroach","endow","entreat","gregarious","indictment","indignant","ineluctable","inquisitive","latitude","levity","malevolent","mediate","occlude","pacify","paragon","patronize","penurious","piquant","rampant","remote","reprobate","turbid","turgid","vacuous"],
+  "Group 33": ["affluent","allegorical","allude","amplify","catastrophic","contemporary","conundrum","defame","detract","detrimental","devious","dormant","draconian","egalitarian","elusive","erstwhile","gloat","harrowing","indefinite","ingenious","keen","multifaceted","omniscient","remarkable","sober","stem from","subdued","token","unravel","withstand"],
+  "Group 34": ["abrasive","artful","avert","avid","brevity","bromide","circumstantial","cloying","counterfeit","denigrate","disciple","extol","forebode","ideologue","impediment","imperative","impulsive","interminable","intuitive","lassitude","omit","ornate","paltry","pejorative","prefigure","presage","prescribe","prevail","propitiate","recapitulate"],
+  "Group 35": ["aplomb","apposite","beholden","belittle","cluster","coherent","contemplate","crafty","dismantle","elaborate","exegesis","forgo","impenetrable","impervious","inalienable","inept","martinet","narcissism","objurgation","passable","penetrating","picturesque","reflect","resourceful","retrench","self-indulgent","speculate","staid","suppress","vestigial"],
+  "Group 36": ["accord","ad hoc","adhere","all-encompassing","aphorism","benchmark","blighted","content","debase","disconcerting","extant","facility","fitful","incite","induce","infelicity","intelligible","makeshift","onetime","opportunistic","plausible","posturing","potent","redundant","sacrosanct","shrewd","unadorned","valedictory","warranted","wistful"],
+  "Group 37": ["attribute","calamitous","censor","champion","compound","deter","dexterous","dictum","dutiful","empathetic","ensue","fathom","frank","germane","grumble","hidebound","hypocrite","impolitic","insidious","intermediary","passive","raillery","ramble","resent","residual","resolve","surrogate","vilify","wanting","willful","querulous","phony","check"]
+};
+
+const GROUP_NAMES = Object.keys(GROUPS);
+const STORAGE_KEY = 'gre_vocab_v3';
+
+let maxGroup = 1;
+let filter   = 'all';
+// allStatuses[dayKey][word] = 'green' | 'red' | 'none'
+// dayKey = 'day1', 'day2', …
+let allStatuses = {};
+let focusedWord = null;
+
+function dayKey(d) { return 'day' + d; }
+
+// ── Persistence ──────────────────────────────────────────────────
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ maxGroup, allStatuses }));
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.maxGroup)     maxGroup     = Math.min(Math.max(1, d.maxGroup), GROUP_NAMES.length);
+    if (d.allStatuses)  allStatuses  = d.allStatuses;
+  } catch(e) {}
+}
+
+// Current day's status map (the group added on this day = last group)
+function currentDayStatuses() {
+  const k = dayKey(maxGroup);
+  if (!allStatuses[k]) allStatuses[k] = {};
+  return allStatuses[k];
+}
+
+function getStatus(word) {
+  // Find which day (group index) this word belongs to, read that day's map
+  for (let d = 1; d <= GROUP_NAMES.length; d++) {
+    if (GROUPS[GROUP_NAMES[d - 1]].includes(word)) {
+      return (allStatuses[dayKey(d)] || {})[word] || 'none';
+    }
+  }
+  return 'none';
+}
+
+function setWordStatus(word, s) {
+  // Write to the day that owns this word
+  for (let d = 1; d <= GROUP_NAMES.length; d++) {
+    if (GROUPS[GROUP_NAMES[d - 1]].includes(word)) {
+      const k = dayKey(d);
+      if (!allStatuses[k]) allStatuses[k] = {};
+      allStatuses[k][word] = s;
+      return;
+    }
+  }
+}
+
+function cycleStatus(word) {
+  const cur = getStatus(word);
+  const next = cur === 'none' ? 'green' : cur === 'green' ? 'red' : 'none';
+  setWordStatus(word, next);
+  save();
+  refreshCell(word);
+  updateStats();
+}
+
+function forceStatus(word, s) {
+  setWordStatus(word, s);
+  save();
+  refreshCell(word);
+  updateStats();
+}
+
+// ── Build sheet ──────────────────────────────────────────────────
+function buildSheet() {
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = '';
+
+  GROUP_NAMES.slice(0, maxGroup).forEach(groupName => {
+    const col = document.createElement('div');
+    col.className = 'group-col';
+    col.dataset.group = groupName;
+
+    const hdr = document.createElement('div');
+    hdr.className = 'col-header';
+    hdr.textContent = groupName;
+    col.appendChild(hdr);
+
+    GROUPS[groupName].forEach(word => {
+      const cell = document.createElement('div');
+      cell.className = 'word-cell';
+      cell.dataset.word = word;
+      cell.tabIndex = 0;
+      cell.textContent = word;
+      applyStatus(cell, getStatus(word));
+
+      cell.addEventListener('click', () => cycleStatus(word));
+      cell.addEventListener('focus', () => { focusedWord = word; });
+      cell.addEventListener('blur',  () => { if (focusedWord === word) focusedWord = null; });
+
+      col.appendChild(cell);
+    });
+
+    sheet.appendChild(col);
+  });
+
+  applyFilter();
+  updateStats();
+}
+
+function applyStatus(cell, status) {
+  cell.classList.remove('status-none','status-green','status-red');
+  cell.classList.add('status-' + status);
+}
+
+function refreshCell(word) {
+  const cell = document.querySelector(`.word-cell[data-word="${CSS.escape(word)}"]`);
+  if (!cell) return;
+  applyStatus(cell, getStatus(word));
+  applyFilterToCell(cell);
+}
+
+// ── Stats ────────────────────────────────────────────────────────
+function updateStats() {
+  const words = GROUP_NAMES.slice(0, maxGroup).flatMap(g => GROUPS[g]);
+  const g = words.filter(w => getStatus(w) === 'green').length;
+  const r = words.filter(w => getStatus(w) === 'red').length;
+  const n = words.length - g - r;
+  const pct = words.length ? Math.round(g / words.length * 100) : 0;
+
+  document.getElementById('statGreen').textContent = `${g} known`;
+  document.getElementById('statRed').textContent   = `${r} wrong`;
+  document.getElementById('statNone').textContent  = `${n} unseen`;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('statPct').textContent   = pct + '%';
+}
+
+// ── Filter ───────────────────────────────────────────────────────
+function applyFilter() {
+  document.querySelectorAll('.word-cell').forEach(applyFilterToCell);
+}
+
+function applyFilterToCell(cell) {
+  const status = getStatus(cell.dataset.word);
+  cell.classList.toggle('hidden', filter !== 'all' && status !== filter);
+}
+
+// ── Slider ───────────────────────────────────────────────────────
+const slider  = document.getElementById('daySlider');
+const dayNum  = document.getElementById('dayNum');
+const groupNum = document.getElementById('groupNum');
+
+function updateSliderLabel(val) {
+  dayNum.textContent  = val;
+  groupNum.textContent = val;
+}
+
+slider.addEventListener('input', e => {
+  const val = parseInt(e.target.value, 10);
+  maxGroup = val;
+  updateSliderLabel(val);
+  save();
+  buildSheet();
+});
+
+// ── Keyboard ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+
+  // Arrow navigation — works whether or not a word is focused
+  if (['arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+    navigateArrow(e.key);
+    return;
+  }
+
+  if (!focusedWord) return;
+  if      (k === 'g') forceStatus(focusedWord, 'green');
+  else if (k === 'r') forceStatus(focusedWord, 'red');
+  else if (k === 'w') forceStatus(focusedWord, 'none');
+  else if (k === 'd') openDefinition(focusedWord);
+});
+
+function navigateArrow(key) {
+  // Build a 2D map: cells[colIndex][rowIndex]
+  const cols = Array.from(document.querySelectorAll('.group-col'));
+  if (cols.length === 0) return;
+
+  const allCells = cols.map(col =>
+    Array.from(col.querySelectorAll('.word-cell'))
+  );
+
+  // Find current position
+  let curCol = -1, curRow = -1;
+  if (focusedWord) {
+    for (let c = 0; c < allCells.length; c++) {
+      const r = allCells[c].findIndex(cell => cell.dataset.word === focusedWord);
+      if (r !== -1) { curCol = c; curRow = r; break; }
+    }
+  }
+
+  // If nothing focused yet, start at top-left
+  if (curCol === -1) { curCol = 0; curRow = 0; }
+  else {
+    if (key === 'ArrowDown')  curRow = Math.min(curRow + 1, allCells[curCol].length - 1);
+    if (key === 'ArrowUp')    curRow = Math.max(curRow - 1, 0);
+    if (key === 'ArrowRight') {
+      if (curCol < allCells.length - 1) { curCol += 1; curRow = Math.min(curRow, allCells[curCol].length - 1); }
+    }
+    if (key === 'ArrowLeft') {
+      if (curCol > 0) { curCol -= 1; curRow = Math.min(curRow, allCells[curCol].length - 1); }
+    }
+  }
+
+  const target = allCells[curCol][curRow];
+  if (target) {
+    target.focus({ preventScroll: false });
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+}
+
+// ── Definition modal ─────────────────────────────────────────────
+const defBackdrop = document.getElementById('defBackdrop');
+const defClose    = document.getElementById('defClose');
+const defWordEl   = document.getElementById('defWord');
+const defPosEl    = document.getElementById('defPos');
+const defBodyEl   = document.getElementById('defBody');
+
+// Simple cache so we don't re-fetch the same word
+const defCache = {};
+
+function openDefinition(word) {
+  defWordEl.textContent = word;
+  defPosEl.textContent  = '';
+  defBodyEl.innerHTML   = '<div class="def-loading">Loading…</div>';
+  defBackdrop.classList.add('open');
+
+  if (defCache[word]) {
+    renderDefinition(defCache[word]);
+    return;
+  }
+
+  // Free Dictionary API — no key required
+  const query = word.replace(/\s+/g, '%20');
+  fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${query}`)
+    .then(r => {
+      if (!r.ok) throw new Error('not found');
+      return r.json();
+    })
+    .then(data => {
+      const entry   = data[0];
+      const meaning = entry.meanings[0];
+      const pos     = meaning?.partOfSpeech || '';
+      const def     = meaning?.definitions[0]?.definition || 'No definition found.';
+
+      // Collect synonyms: from meaning-level and definition-level, deduplicated, max 3
+      const synSet = new Set();
+      entry.meanings.forEach(m => {
+        (m.synonyms || []).forEach(s => synSet.add(s));
+        (m.definitions || []).forEach(d => (d.synonyms || []).forEach(s => synSet.add(s)));
+      });
+      const synonyms = [...synSet].slice(0, 3);
+
+      const result = { pos, def, synonyms };
+      defCache[word] = result;
+      renderDefinition(result);
+    })
+    .catch(() => {
+      defBodyEl.innerHTML = '<div class="def-error">Definition not found for this word.</div>';
+    });
+}
+
+function renderDefinition({ pos, def, synonyms }) {
+  defPosEl.textContent = pos;
+  let html = `<div class="def-label">Definition</div>
+              <div class="def-text">${def}</div>`;
+  if (synonyms.length) {
+    const chips = synonyms.map(s => `<span class="def-syn-chip">${s}</span>`).join('');
+    html += `<div class="def-label">Synonyms</div>
+             <div class="def-synonyms">${chips}</div>`;
+  }
+  defBodyEl.innerHTML = html;
+}
+
+function closeDefinition() {
+  defBackdrop.classList.remove('open');
+}
+
+defClose.addEventListener('click', closeDefinition);
+defBackdrop.addEventListener('click', e => { if (e.target === defBackdrop) closeDefinition(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDefinition(); });
+
+// ── Filters ──────────────────────────────────────────────────────
+document.querySelectorAll('.filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    filter = tab.dataset.filter;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    applyFilter();
+  });
+});
+
+// ── Reset ────────────────────────────────────────────────────────
+document.getElementById('resetDayBtn').addEventListener('click', () => {
+  if (!confirm(`Reset all statuses for Day ${maxGroup} (Group ${maxGroup})?`)) return;
+  allStatuses[dayKey(maxGroup)] = {};
+  save();
+  buildSheet();
+});
+
+document.getElementById('resetAllBtn').addEventListener('click', () => {
+  if (!confirm('Reset all word statuses for every day?')) return;
+  allStatuses = {};
+  save();
+  buildSheet();
+});
+
+// ── Password gate ─────────────────────────────────────────────────
+(function() {
+  const PASS = 'avigoat';
+  const AUTH_KEY = 'gre_auth';
+  const gate      = document.getElementById('gate');
+  const gateInput = document.getElementById('gateInput');
+  const gateBtn   = document.getElementById('gateBtn');
+  const gateError = document.getElementById('gateError');
+
+  function unlock() {
+    gate.classList.add('hidden');
+  }
+
+  function tryPassword() {
+    if (gateInput.value === PASS) {
+      sessionStorage.setItem(AUTH_KEY, '1');
+      gateError.textContent = '';
+      gateInput.classList.remove('error');
+      unlock();
+    } else {
+      gateError.textContent = 'Incorrect password.';
+      gateInput.classList.add('error');
+      gateInput.select();
+    }
+  }
+
+  gateBtn.addEventListener('click', tryPassword);
+  gateInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryPassword(); });
+
+  // Already authenticated this session?
+  if (sessionStorage.getItem(AUTH_KEY) === '1') unlock();
+})();
+
+// ── Init ─────────────────────────────────────────────────────────
+load();
+slider.value = maxGroup;
+updateSliderLabel(maxGroup);
+buildSheet();
+</script>
+</body>
+</html>
